@@ -3,7 +3,7 @@
 from src.database import get_connection
 
 
-def create_note(user_id, title, content):
+def create_note(user_id: int, title: str, content: str) -> int:
     connection = get_connection()
 
     cursor = connection.cursor()
@@ -25,7 +25,7 @@ def create_note(user_id, title, content):
     return note_id
 
 
-def get_user_notes(user_id):
+def get_user_notes(user_id: int) -> list[tuple]:
     connection = get_connection()
 
     notes = connection.execute(
@@ -42,24 +42,7 @@ def get_user_notes(user_id):
     return notes
 
 
-def get_note(note_id):
-    connection = get_connection()
-
-    note = connection.execute(
-        """
-        SELECT id, user_id, title, content, created_at, updated_at
-        FROM notes
-        WHERE id = ?
-        """,
-        (note_id,)
-    ).fetchone()
-
-    connection.close()
-
-    return note
-
-
-def update_note(note_id, title, content):
+def update_note(note_id: int, title: str, content: str) -> None:
     connection = get_connection()
 
     connection.execute(
@@ -76,7 +59,7 @@ def update_note(note_id, title, content):
     connection.close()
 
 
-def delete_note(note_id):
+def delete_note(note_id: int) -> None:
     connection = get_connection()
 
     connection.execute(
@@ -90,3 +73,24 @@ def delete_note(note_id):
     connection.commit()
 
     connection.close()
+
+
+def get_note_by_title(user_id: int, title: str) -> tuple | None:
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT id, user_id, title, content, created_at, updated_at
+        FROM notes
+        WHERE user_id = ? AND title = ?
+        """,
+        (user_id, title),
+    )
+
+    note = cursor.fetchone()
+
+    connection.close()
+
+    return note

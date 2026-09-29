@@ -4,18 +4,13 @@ import os
 
 from langchain_openai import ChatOpenAI
 
-from src.config import (
-    OPENROUTER_MODEL,
-    TEMPERATURE,
-    OPENROUTER_BASE_URL
-)
+from src.config import GROQ_MODEL, TEMPERATURE
 
 
 def get_llm():
-
     return ChatOpenAI(
-        model=OPENROUTER_MODEL,
-        openai_api_base=OPENROUTER_BASE_URL,
-        openai_api_key=os.environ["OPENROUTER_API_KEY"],
-        temperature=TEMPERATURE
+        model=GROQ_MODEL,
+        temperature=TEMPERATURE,
+        api_key=os.environ["GROQ_API_KEY"],
+        base_url="https://api.groq.com/openai/v1",
     )

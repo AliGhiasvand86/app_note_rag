@@ -1,7 +1,5 @@
 # Application configuration
 
-OPENROUTER_MODEL = "openrouter/free"
+GROQ_MODEL = "openai/gpt-oss-20b"
 
 TEMPERATURE = 0.3
-
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
