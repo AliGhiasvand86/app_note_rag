@@ -6,20 +6,16 @@ from src.database import get_connection
 def create_note(user_id: int, title: str, content: str) -> int:
     connection = get_connection()
 
-    cursor = connection.cursor()
-
-    cursor.execute(
+    note_id = connection.execute(
         """
         INSERT INTO notes (user_id, title, content)
-        VALUES (?, ?, ?)
+        VALUES (%s, %s, %s)
+        RETURNING id
         """,
         (user_id, title, content)
-    )
+    ).fetchone()[0]
 
     connection.commit()
-
-    note_id = cursor.lastrowid
-
     connection.close()
 
     return note_id
@@ -32,7 +28,7 @@ def get_user_notes(user_id: int) -> list[tuple]:
         """
         SELECT id, title, content, created_at, updated_at
         FROM notes
-        WHERE user_id = ?
+        WHERE user_id = %s
         """,
         (user_id,)
     ).fetchall()
@@ -48,14 +44,13 @@ def update_note(note_id: int, title: str, content: str) -> None:
     connection.execute(
         """
         UPDATE notes
-        SET title = ?, content = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
+        SET title = %s, content = %s, updated_at = CURRENT_TIMESTAMP
+        WHERE id = %s
         """,
         (title, content, note_id)
     )
 
     connection.commit()
-
     connection.close()
 
 
@@ -65,31 +60,26 @@ def delete_note(note_id: int) -> None:
     connection.execute(
         """
         DELETE FROM notes
-        WHERE id = ?
+        WHERE id = %s
         """,
         (note_id,)
     )
 
     connection.commit()
-
     connection.close()
 
 
 def get_note_by_title(user_id: int, title: str) -> tuple | None:
     connection = get_connection()
 
-    cursor = connection.cursor()
-
-    cursor.execute(
+    note = connection.execute(
         """
         SELECT id, user_id, title, content, created_at, updated_at
         FROM notes
-        WHERE user_id = ? AND title = ?
+        WHERE user_id = %s AND title = %s
         """,
         (user_id, title),
-    )
-
-    note = cursor.fetchone()
+    ).fetchone()
 
     connection.close()
 

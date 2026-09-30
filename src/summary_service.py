@@ -6,20 +6,16 @@ from src.database import get_connection
 def create_summary(note_id, summary_text):
     connection = get_connection()
 
-    cursor = connection.cursor()
-
-    cursor.execute(
+    summary_id = connection.execute(
         """
         INSERT INTO summaries (note_id, summary_text)
-        VALUES (?, ?)
+        VALUES (%s, %s)
+        RETURNING id
         """,
         (note_id, summary_text)
-    )
+    ).fetchone()[0]
 
     connection.commit()
-
-    summary_id = cursor.lastrowid
-
     connection.close()
 
     return summary_id
@@ -32,7 +28,7 @@ def get_note_summaries(note_id):
         """
         SELECT id, summary_text, created_at
         FROM summaries
-        WHERE note_id = ?
+        WHERE note_id = %s
         ORDER BY created_at DESC
         """,
         (note_id,)
@@ -50,7 +46,7 @@ def get_latest_summary(note_id):
         """
         SELECT id, summary_text, created_at
         FROM summaries
-        WHERE note_id = ?
+        WHERE note_id = %s
         ORDER BY created_at DESC
         LIMIT 1
         """,
@@ -68,11 +64,10 @@ def delete_summary(summary_id):
     connection.execute(
         """
         DELETE FROM summaries
-        WHERE id = ?
+        WHERE id = %s
         """,
         (summary_id,)
     )
 
     connection.commit()
-
     connection.close()

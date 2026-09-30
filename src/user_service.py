@@ -6,20 +6,16 @@ from src.database import get_connection
 def create_user(username):
     connection = get_connection()
 
-    cursor = connection.cursor()
-
-    cursor.execute(
+    user_id = connection.execute(
         """
         INSERT INTO users (username)
-        VALUES (?)
+        VALUES (%s)
+        RETURNING id
         """,
         (username,)
-    )
+    ).fetchone()[0]
 
     connection.commit()
-
-    user_id = cursor.lastrowid
-
     connection.close()
 
     return user_id
@@ -32,7 +28,7 @@ def get_user(user_id):
         """
         SELECT id, username, created_at
         FROM users
-        WHERE id = ?
+        WHERE id = %s
         """,
         (user_id,)
     ).fetchone()
