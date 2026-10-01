@@ -39,5 +39,18 @@ def create_tables():
         )
     """)
 
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS chunks (
+            id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+            note_id INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            chunk_index INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (note_id)
+                REFERENCES notes(id)
+                ON DELETE CASCADE
+        )
+    """)
+
     connection.commit()
     connection.close()

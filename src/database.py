@@ -17,6 +17,13 @@ DRIVE_ROOT = "/content/drive/MyDrive/app_note_rag"
 BACKUP_DIRECTORY = os.path.join(DRIVE_ROOT, "db_backups")
 BACKUP_PATH = os.path.join(BACKUP_DIRECTORY, "app_note_rag_backup.sql")
 
+EXPECTED_TABLES = {
+    "users",
+    "notes",
+    "summaries",
+    "chunks",
+}
+
 DATABASE_CONFIG = {
     "host": DATABASE_HOST,
     "port": DATABASE_PORT,
@@ -51,6 +58,13 @@ def _install_postgresql():
     _run_command(
         "apt-get update -qq && "
         "apt-get install -y -qq postgresql postgresql-contrib"
+    )
+
+
+def _install_pgvector():
+    _run_command(
+        "apt-get update -qq && "
+        "apt-get install -y -qq postgresql-16-pgvector"
     )
 
 
@@ -89,35 +103,71 @@ def _ensure_database_user():
         )
 
 
-def _ensure_database():
-    database_exists = _run_command(
+def _database_exists():
+    result = _run_command(
         f"sudo -u postgres psql -tAc "
         f"\"SELECT 1 FROM pg_database WHERE datname='{DATABASE_NAME}';\""
     )
 
-    if database_exists != "1":
+    return result == "1"
+
+
+def _ensure_database():
+    if not _database_exists():
         _run_command(
             f"sudo -u postgres psql -c "
             f"\"CREATE DATABASE {DATABASE_NAME} OWNER {DATABASE_USER};\""
         )
 
 
-def _database_has_tables():
+def _ensure_pgvector():
+    _run_command(
+        f"sudo -u postgres psql {DATABASE_NAME} -c "
+        "\"CREATE EXTENSION IF NOT EXISTS vector;\""
+    )
+
+
+def _get_tables():
     result = _run_command(
         f"sudo -u postgres psql {DATABASE_NAME} -tAc "
-        f"\"SELECT COUNT(*) FROM information_schema.tables "
+        f"\"SELECT table_name "
+        f"FROM information_schema.tables "
         f"WHERE table_schema='public';\""
     )
 
-    return int(result or 0) > 0
+    return {
+        table.strip()
+        for table in result.splitlines()
+        if table.strip()
+    }
+
+
+def _database_is_complete():
+    return EXPECTED_TABLES.issubset(_get_tables())
+
+
+def _reset_database():
+    _run_command(
+        f"sudo -u postgres psql -d postgres -c "
+        f"\"DROP DATABASE IF EXISTS {DATABASE_NAME};\""
+    )
+
+    _run_command(
+        f"sudo -u postgres psql -d postgres -c "
+        f"\"CREATE DATABASE {DATABASE_NAME} OWNER {DATABASE_USER};\""
+    )
+
+    _ensure_pgvector()
 
 
 def _restore_backup():
     if not os.path.exists(BACKUP_PATH):
         return False
 
-    if _database_has_tables():
+    if _database_is_complete():
         return False
+
+    _reset_database()
 
     _run_command(
         f"sudo -u postgres psql {DATABASE_NAME} < '{BACKUP_PATH}'"
@@ -131,9 +181,12 @@ def init_database():
     os.makedirs(BACKUP_DIRECTORY, exist_ok=True)
 
     _install_postgresql()
+    _install_pgvector()
     _start_postgresql()
+
     _ensure_database_user()
     _ensure_database()
+    _ensure_pgvector()
 
     restored = _restore_backup()
 

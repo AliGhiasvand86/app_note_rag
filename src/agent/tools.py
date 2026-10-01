@@ -1,5 +1,4 @@
 # Agent tools
-
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
@@ -10,7 +9,9 @@ from src.note_service import (
 )
 from src.summary_service import create_summary
 from src.summarizer import generate_summary
-
+from src.rag.agent_tool import search_notes
+from src.rag.ingestion.repository import save_chunks
+from src.rag.ingestion.service import ingestion_service
 
 def _get_user_id(config: RunnableConfig) -> int:
     return config["configurable"]["user_id"]
@@ -18,14 +19,21 @@ def _get_user_id(config: RunnableConfig) -> int:
 
 @tool
 def create_note_tool(title: str, content: str, config: RunnableConfig) -> str:
-    """Create a new note for the authenticated user with a title and content."""
+    """Create a new note and index its content for RAG retrieval."""
 
     user_id = _get_user_id(config)
 
-    create_note(
+    note_id = create_note(
         user_id=user_id,
         title=title,
         content=content,
+    )
+
+    chunks = ingestion_service.process_note(content)
+
+    save_chunks(
+        note_id=note_id,
+        chunks=chunks,
     )
 
     return f"Note '{title}' created successfully."
@@ -83,4 +91,5 @@ tools = [
     create_note_tool,
     summarize_note_tool,
     delete_note_tool,
+    search_notes,
 ]
